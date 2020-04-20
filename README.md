@@ -1,68 +1,125 @@
-# Destreamer
+<a href="https://github.com/snobu/destreamer/actions">
+  <img src="https://github.com/snobu/destreamer/workflows/Node%20CI/badge.svg" alt="CI build status" />
+</a>
 
-![](logo.png)
+![destreamer](assets/logo.png)
 
-## Saves Microsoft Stream videos for offline enjoyment.
+_(Alternative artwork proposals are welcome! Submit one through an Issue.)_
 
-Alpha-quality, don't expect much. It does work though, so that's a neat feature.
+# Saves Microsoft Stream videos for offline enjoyment
 
-It's slow (e.g. a 60-min video takes 20-30 minutes to download). Not much i can do about it for now unless i find a better way than ripping HLS.
+### v2.0 Release, codename _Hammer of Dawn<sup>TM</sup>_
 
-## NEW `dev` BRANCH!
+This release would not have been possible without the code and time contributed by two distinguished developers: [@lukaarma](https://github.com/lukaarma) and [@kylon](https://github.com/kylon). Thank you!
 
-This is now a TypeScript project if you checkout the `dev` branch.
-All new development happens on `dev` branch.
+## What's new
 
-# PLEASE USE THE`dev` BRANCH, `master` is a quite a bit behind and may break in the near future
+- Major code refactoring
+- Dramatically improved error handling
+- We now have a token cache so we can reuse access tokens. This really means that within one hour you need to perform the interactive browser login only once.
+- We removed the dependency on `youtube-dl`.
+- Getting to the HLS URL is dramatically more reliable as we dropped parsing the DOM for the video element in favor of calling the Microsoft Stream API
+- Fixed access token lifetime bugs (you no longer get a 403 Forbidden midway though your download list). Still one outstanding edge case here, see _Found a bug_ at the bottom for more.
+- Fixed a major 2FA bug that would sometimes cause a timeout in our code
+- Fixed a wide variety of other bugs, maybe introduced a few new ones :)
 
-## DISCLAIMER
+## Disclaimer
 
 Hopefully this doesn't break the end user agreement for Microsoft Stream. Since we're simply saving the HLS stream to disk as if we were a browser, this does not abuse the streaming endpoints. However i take no responsibility if either Microsoft or your Office 365 admins request a chat with you in a small white room.
 
+## Prereqs
 
-## PREREQS
+- **Node.js**: anything above v8.0 seems to work. A GitHub Action runs tests on all major Node versions on every commit.
+- **npm**: usually comes with Node.js, type `npm` in your terminal to check for its presence
+- **ffmpeg**: a recent version (year 2019 or above), in `$PATH` or in the same directory as this README file (project root).
+- **git**: one or more npm dependencies require git. Install git with your favorite package manager or https://git-scm.com/downloads
 
-* **Node.js**: anything above v8.0 will probably work. Tested on v11.6.0.
-* **youtube-dl**: https://ytdl-org.github.io/youtube-dl/download.html, you'll need a fairly recent version that understands encrypted HLS streams. This needs to be in your $PATH. Destreamer calls `youtube-dl` with a bunch of arguments.
-* **ffmpeg**: a recent version (year 2019 or above), in `$PATH`.
+Destreamer takes a [honeybadger](https://www.youtube.com/watch?v=4r7wHMg5Yjg) approach towards the OS it's running on. We've successfully tested it on Windows, macOS and Linux.
 
-Destreamer takes a [honeybadger](https://www.youtube.com/watch?v=4r7wHMg5Yjg) approach towards the OS it's running on, tested on Windows, results may vary, feel free to open an issue if trouble arise.
+## How to build
 
-## USAGE
+To build destreamer clone this repository, install dependencies and run the build script -
 
-* Edit `destreamer.ts` (`.js` if using the vanilla JS master branch) and replace the username const with your own, you may still need to enter your password or go through 2FA if you don't have the STS cookie saved in Chrome. If you do (i.e. you usually log in to Microsoft Stream with Chrome), then you may try turning `headless: false` to `true` for a truly headless experience)
-* `npm install` to restore packages
-* `npm start <URL of the video>`
-
-
-## EXPECTED OUTPUT
-
-```
-Using youtube-dl version 2019.01.17
-Launching headless Chrome to perform the OpenID Connect dance...
-
-Navigating to STS login page...
-We are logged in. Sorry, i mean "you".
-Got cookie. Consuming cookie...
-Looking up AMS stream locator...
-Video title is: Mondays with IGD 11th March-2019
-At this point Chrome's job is done, shutting it down...
-Constructing HLSv3 URL...
-Spawning youtube-dl with cookie and HLSv3 URL...
-
-[generic] manifest(format=m3u8-aapl-v3): Requesting header
-[generic] manifest(format=m3u8-aapl-v3): Downloading m3u8 information
-[download] Destination: Mondays with IGD 11th March-2019.mp4
-ffmpeg version 4.0.2 Copyright (c) 2000-2018 the FFmpeg developers
-  built with gcc 7.3.1 (GCC) 20180722
-  configuration: --enable-gpl --enable-version3 --enable-sdl2 --enable-bzlib 
-
-[...]
-
-frame= 8435 fps= 67 q=-1.0 Lsize=  192018kB time=00:05:37.38 bitrate=4662.3kbits/s speed=2.68x
-video:186494kB audio:5380kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 0.074759%
-[ffmpeg] Downloaded 196626728 bytes
-[download] Download completed
+```sh
+$ git clone https://github.com/snobu/destreamer
+$ cd destreamer
+$ npm install
+$ npm run build
 ```
 
-The video is now saved under `videos/`, or whatever the `outputDirectory` const points to.
+## Usage
+
+```
+$ ./destreamer.sh
+
+Options:
+  --help                   Show help                                   [boolean]
+  --version                Show version number                         [boolean]
+  --videoUrls, -i          List of video urls                            [array]
+  --videoUrlsFile, -f      Path to txt file containing the urls         [string]
+  --username, -u                                                        [string]
+  --outputDirectory, -o    The directory where destreamer will save your
+                           downloads [default: videos]                  [string]
+  --outputDirectories, -O  Path to a txt file containing one output directory
+                           per video                                    [string]
+  --noExperiments, -x      Do not attempt to render video thumbnails in the
+                           console                    [boolean] [default: false]
+  --simulate, -s           Disable video download and print metadata information
+                           to the console             [boolean] [default: false]
+  --verbose, -v            Print additional information to the console (use this
+                           before opening an issue on GitHub)
+                                                      [boolean] [default: false]
+```
+
+Make sure you use the right script (`.sh`, `.ps1` or `.cmd`) and escape char (if using line breaks) for your shell.
+PowerShell uses a backtick [ **`** ] and cmd.exe uses a caret [ **^** ].
+
+Note that destreamer won't run in an elevated (Administrator/root) shell.
+
+Download a video -
+```sh
+$ ./destreamer.sh -i "https://web.microsoftstream.com/video/VIDEO-1"
+```
+
+Download a video and speed up the interactive login by automagically filling in the username -
+```sh
+$ ./destreamer.sh -u user@example.com -i "https://web.microsoftstream.com/video/VIDEO-1"
+```
+
+Download a video to a custom path -
+```sh
+$ ./destreamer.sh -i "https://web.microsoftstream.com/video/VIDEO-1" -o /Users/hacker/Downloads
+```
+
+Download two or more videos -
+```sh
+$ ./destreamer.sh -i "https://web.microsoftstream.com/video/VIDEO-1" \
+                     "https://web.microsoftstream.com/video/VIDEO-2"
+```
+
+Download many videos but read URLs from a file -
+```sh
+$ ./destreame.sh -f list.txt
+```
+
+You can create a `.txt` file containing your video URLs, one video per line. The text file can have any name, followed by the `.txt` extension.
+
+Passing `--username` is optional. It's there to make logging in faster (the username field will be populated automatically on the login form).
+
+You can use an absolute path for `-o` (output directory), for example `/mnt/videos`.
+
+## Expected output
+
+![screenshot](assets/screenshot-win.png)
+
+By default, downloads are saved under `videos/` unless specified by `-o` (output directory).
+
+## Contributing
+
+Contributions are welcome. Open an issue first before sending in a pull request. All pull requests require at least one code review before they are merged to master.
+
+## Found a bug?
+
+There is one outstanding bug that you may hit: if you download two or more videos in one go, if one of the videos take more than one hour to complete, the next download will fail as the cookie is now expired. We'll patch this soon.
+
+For other bugs, please open an [issue](https://github.com/snobu/destreamer/issues) and we'll look into it.
